@@ -3,10 +3,6 @@ from blog.models import Comment, Post, Tag
 from django.db.models import Count
 
 
-def get_related_posts_count(tag):
-    return tag.posts.count()
-
-
 def serialize_post(post):
     return {
         'title': post.title,
@@ -35,9 +31,8 @@ def index(request):
     fresh_posts = Post.objects.order_by('published_at')
     most_fresh_posts = list(fresh_posts)[-5:]
 
-    tags = Tag.objects.all()
-    popular_tags = sorted(tags, key=get_related_posts_count)
-    most_popular_tags = popular_tags[-5:]
+    popular_tags = Tag.objects.annotate(tag_usagе=Count('posts')).order_by('-tag_usagе')
+    most_popular_tags = popular_tags[:5]
 
     context = {
         'most_popular_posts': [
@@ -118,8 +113,3 @@ def contacts(request):
     # позже здесь будет код для статистики заходов на эту страницу
     # и для записи фидбека
     return render(request, 'contacts.html', {})
-
-
-def get_likes_count(post):
-    likes_count = post.num_likes
-    return likes_count
