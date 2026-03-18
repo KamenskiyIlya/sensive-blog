@@ -15,6 +15,41 @@ class PostQuerySet(models.QuerySet):
         return posts_at_year
 
 
+    def popular(self):
+        popular_posts = (
+            self
+            .annotate(num_likes=Count('likes', distinct=True))
+            .order_by('-num_likes')
+        )
+        return popular_posts
+
+
+    def fetch_with_comments_count(self):
+        ''' Данный метод помогает избежать перегруза запросов к БД.
+        В данном проекте для отображения популярных постов мы уже
+        используем 1 annotate() для подсчета лайков у постов, чтобы
+        отсортировать их по популярности. Если напрямую использовать
+        annotate() второй раз, получится сложный запрос, ведь 
+        мы будем агрегировать данные по 2м признакам. Если бы у
+        нас был простой запрос хватило бы простого annotate()
+        '''
+        posts = list(self)
+        post_ids = [post.id for post in posts]
+        post_with_comments = (
+            Post.objects
+            .filter(id__in=post_ids)
+            .annotate(num_comments=Count('comments', distinct=True))
+        )
+        ids_and_comments = (
+            post_with_comments
+            .values_list('id', 'num_comments')
+        )
+        count_for_id = dict(ids_and_comments)
+        for post in posts:
+            post.num_comments = count_for_id[post.id]
+        return posts
+
+
 class TagQuerySet(models.QuerySet):
 
     def popular(self):
