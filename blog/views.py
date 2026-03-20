@@ -75,6 +75,7 @@ def index(request):
 
 def post_detail(request, slug):
     post = Post.objects.get(slug=slug)
+    tags_with_posts_num = Tag.objects.annotate(tag_usagе=Count('posts'))
     comments = Comment.objects.filter(post=post)
     serialized_comments = []
     for comment in comments:
@@ -86,7 +87,7 @@ def post_detail(request, slug):
 
     likes = post.likes.all()
 
-    related_tags = post.tags.all()
+    related_tags = post.tags.all().annotate(tag_usagе=Count('posts'))
 
     serialized_post = {
         'title': post.title,
@@ -100,12 +101,17 @@ def post_detail(request, slug):
         'tags': [serialize_tag(tag) for tag in related_tags],
     }
 
-    most_popular_tags = Tag.objects.popular()[:5]
+    
+    most_popular_tags = tags_with_posts_num.popular()[:5]
+
 
     most_popular_posts = (
         Post.objects
         .popular()
-        .prefetch_related('author', 'tags')[:5]
+        .prefetch_related('author', Prefetch(
+            'tags',
+            queryset=tags_with_posts_num
+        ))[:5]
         .fetch_with_comments_count()
     )
 
@@ -120,14 +126,18 @@ def post_detail(request, slug):
 
 
 def tag_filter(request, tag_title):
+    tags_with_posts_num = Tag.objects.annotate(tag_usagе=Count('posts'))
     tag = Tag.objects.get(title=tag_title)
 
-    most_popular_tags = Tag.objects.popular()[:5]
+    most_popular_tags = tags_with_posts_num.popular()[:5]
 
     most_popular_posts = (
         Post.objects
         .popular()
-        .prefetch_related('author', 'tags')[:5]
+        .prefetch_related('author', Prefetch(
+            'tags',
+            queryset=tags_with_posts_num
+        ))[:5]
         .fetch_with_comments_count()
     )
 
@@ -135,7 +145,10 @@ def tag_filter(request, tag_title):
         tag.posts
         .all()
         .annotate(num_comments=Count('comments', distinct=True))
-        .prefetch_related('author', 'tags')[:20]
+        .prefetch_related('author', Prefetch(
+            'tags',
+            queryset=tags_with_posts_num
+        ))[:20]
     )
 
     context = {
