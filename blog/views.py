@@ -30,10 +30,8 @@ def index(request):
     most_popular_posts = (
         Post.objects
         .popular()
-        .prefetch_related('author', Prefetch(
-            'tags',
-            queryset=tags_with_posts_num
-        ))[:5]
+        .select_related('author')
+        .preload_tags_inf(tags_with_posts_num)[:5]
         .fetch_with_comments_count()
     )
 
@@ -41,10 +39,8 @@ def index(request):
         Post.objects
         .annotate(comments_num=Count('comments'))
         .order_by('-published_at')
-        .prefetch_related('author', Prefetch(
-            'tags',
-            queryset=tags_with_posts_num
-        ))
+        .select_related('author')
+        .preload_tags_inf(tags_with_posts_num)
     )[:5]
 
     most_popular_tags = tags_with_posts_num.popular()[:5]
@@ -65,12 +61,8 @@ def post_detail(request, slug):
         Post.objects
         .annotate(likes_num=Count('likes'))
         .select_related('author')
-        .prefetch_related(Prefetch(
-            'tags',
-            queryset=tags_with_posts_num
-        ))
+        .preload_tags_inf(tags_with_posts_num)
         .get(slug=slug)
-
     )
     comments = (
         Comment.objects
@@ -108,10 +100,7 @@ def post_detail(request, slug):
         Post.objects
         .annotate(likes_num=Count('likes'))
         .select_related('author')
-        .prefetch_related(Prefetch(
-            'tags',
-            queryset=tags_with_posts_num
-        ))[:5]
+        .preload_tags_inf(tags_with_posts_num)[:5]
         .fetch_with_comments_count()
     )
 
@@ -138,19 +127,15 @@ def tag_filter(request, tag_title):
     most_popular_posts = (
         Post.objects
         .popular()
-        .prefetch_related('author', Prefetch(
-            'tags',
-            queryset=tags_with_posts_num
-        ))[:5]
+        .select_related('author')
+        .preload_tags_inf(tags_with_posts_num)[:5]
         .fetch_with_comments_count()
     )
 
     related_posts = (
         tag.posts
-        .prefetch_related('author', Prefetch(
-            'tags',
-            queryset=tags_with_posts_num
-        ))
+        .select_related('author')
+        .preload_tags_inf(tags_with_posts_num)
         .order_by('published_at')[:20]
         .fetch_with_comments_count()
     )
